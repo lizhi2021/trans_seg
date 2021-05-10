@@ -6,31 +6,36 @@ from torch.utils.data import DataLoader, Dataset
 
 from .transform import pad_data, resize_data
 
-class tranSeg(Dataset):
+class TranSeg(Dataset):
     def __init__(self, path, image_size, transforms=None):
         self.transforms = transforms
+        self.image_size = image_size
         
-        image_path = os.path.join(path, 'image')
+        image_path = os.path.join(path, 'npy')
         mask_path = os.path.join(path, 'mask')
 
         self.info = []
 
         for image in sorted(os.listdir(image_path)):
-            image_array = np.load(os.path.join(image_path, image))
-            image_array = pad_data(image_array)
-            image_array = resize_data(image_array)
+            image_name = os.path.join(image_path, image)
 
             mask = image.split('.')[0] + 'mask.npy'
-            mask_array = np.load(os.path.join(mask_path, mask))
-            mask_array = pad_data(mask_array)
-            mask_array = resize_data(image_array)
+            mask_name = os.path.join(mask_path, mask)            
 
-            self.info.append((image_array, mask_array))
+            self.info.append((image_name, mask_name))
 
 
 
     def __getitem__(self, index):
-        image_array, mask_array = self.info(index)
+        image_name, mask_name = self.info[index]
+
+        image_array = np.load(image_name, allow_pickle=True)
+        image_array = pad_data(image_array)
+        image_array = resize_data(image_array, self.image_size)
+
+        mask_array = np.load(mask_name, allow_pickle=True)
+        mask_array = pad_data(mask_array)
+        mask_array = resize_data(image_array, self.image_size)
         
         if self.transforms is not None:
             image_array, mask_array = self.transforms(image_array, mask_array)
