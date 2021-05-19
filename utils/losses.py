@@ -22,6 +22,22 @@ def dice_loss1(score, target):
     loss = 1 - loss
     return loss
 
+# dice value
+def dice_coef(pred_label, gt_label):
+    # list of classes
+    c_list = np.unique(gt_label)
+
+    dice_c = []
+    for c in range(1, len(c_list)): # dice not for bg
+        # intersection
+        ints = np.sum(((pred_label == c_list[c]) * 1) * ((gt_label == c_list[c]) * 1))
+        # sum
+        sums = np.sum(((pred_label == c_list[c]) * 1) + ((gt_label == c_list[c]) * 1)) + 0.0001
+        dice_c.append((2.0 * ints) / sums)
+
+    return dice_c
+    
+
 def entropy_loss(p,C=2):
     ## p N*C*W*H*D
     y1 = -1*torch.sum(p*torch.log(p+1e-6), dim=1)/torch.tensor(np.log(C)).cuda()
