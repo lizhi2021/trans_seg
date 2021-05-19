@@ -12,7 +12,7 @@ class TranSeg(Dataset):
         self.image_size = image_size
         
         image_path = os.path.join(path, 'npy')
-        mask_path = os.path.join(path, 'mask')
+        mask_path = os.path.join(path, 'liver_mask')
 
         self.info = []
 
@@ -20,7 +20,9 @@ class TranSeg(Dataset):
             image_name = os.path.join(image_path, image)
 
             mask = image.split('.')[0] + 'mask.npy'
-            mask_name = os.path.join(mask_path, mask)            
+            mask_name = os.path.join(mask_path, mask)       
+            if not os.path.exists(mask_name):
+                continue
 
             self.info.append((image_name, mask_name))
 
@@ -35,7 +37,7 @@ class TranSeg(Dataset):
 
         mask_array = np.load(mask_name, allow_pickle=True)
         mask_array = pad_data(mask_array)
-        mask_array = resize_data(image_array, self.image_size)
+        mask_array = resize_data(mask_array, self.image_size)
         
         if self.transforms is not None:
             image_array, mask_array = self.transforms(image_array, mask_array)
