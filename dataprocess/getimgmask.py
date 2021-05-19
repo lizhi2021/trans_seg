@@ -13,7 +13,7 @@ import SimpleITK as sitk
 def buildDir(path):
     image_dir = os.path.join(path, 'image')
     npy_dir = os.path.join(path, 'npy')
-    mask_dir = os.path.join(path, 'mask')
+    mask_dir = os.path.join(path, 'liver_mask')
     if not os.path.exists(image_dir):
         os.mkdir(image_dir)
     if not os.path.exists(npy_dir):
@@ -45,11 +45,12 @@ def normalize(img):
 
 def getImgMask(case_path, item_list, slice):
     image_path = case_path + '/' + item_list[slice - 1]
-    mask_path = case_path + '/' + item_list[slice]
-    image_array = nib.load(image_path).get_fdata()
+    mask_path = case_path + '/' + item_list[slice + 1]
+    # image_array = nib.load(image_path).get_fdata()
+    image_array = 1
     mask_array, mask_head = nrrd.read(mask_path)
-    image_array = windowProcess(image_array)
-    image_array = normalize(image_array)
+    # image_array = windowProcess(image_array)
+    # image_array = normalize(image_array)
     mask_array[mask_array > 0] = 1
     return image_array, mask_array
 
@@ -57,15 +58,19 @@ def getImgMask(case_path, item_list, slice):
 
 def saveImg(image_array, mask_array, phase):
     mask_list = sorted(list(set(np.nonzero(mask_array)[-1])))
-    for i in range(mask_list[0] - 1, mask_list[-1] + 2):
-        slice_array = image_array[:, :, i]
+    # for i in range(mask_list[0] - 1, mask_list[-1] + 2):
+    for i in mask_list:
+        # slice_array = image_array[:, :, i]
         slice_mask = mask_array[:, :, i]
-        image_name = test_num + '_' + str(i) + phase + '.jpg'
-        npy_name = test_num + '_' + str(i) + phase + '.npy'
-        mask_name = test_num + '_' + str(i) + phase + '_mask_.npy'
+        # image_name = test_num + '_' + str(i) + phase + '.jpg'
+        # npy_name = test_num + '_' + str(i) + phase + '.npy'
+        mask_name = test_num + '_' + str(i) + phase + 'mask.npy'
 
-        imageio.imwrite(os.path.join(image_dir, image_name), slice_array)
-        np.save(os.path.join(npy_dir, npy_name), slice_array)
+        if os.path.exists(os.path.join(mask_dir, mask_name)):
+            continue
+
+        # imageio.imwrite(os.path.join(image_dir, image_name), slice_array)
+        # np.save(os.path.join(npy_dir, npy_name), slice_array)
         np.save(os.path.join(mask_dir, mask_name), slice_mask)
         
 
