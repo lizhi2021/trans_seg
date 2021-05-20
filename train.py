@@ -116,6 +116,8 @@ class SegModel(pl.LightningModule):
 
         val_loss = 0.5 * loss_ce + 0.5 * loss_dice
         self.log('val/joint_loss', val_loss)
+
+        out_pre = torch.argmax(out, dim=1, keepdim=True)
         
         sample_imgs = img[:1]
         grid = torchvision.utils.make_grid(sample_imgs, 1).cpu().numpy()
@@ -126,6 +128,11 @@ class SegModel(pl.LightningModule):
         mask_grid = torchvision.utils.make_grid(sample_mask, 1).cpu().numpy()
         mask_grid = np.transpose(mask_grid, (0, 2, 1))
         self.logger.experiment.add_image('val/example_mask', mask_grid, batch_idx)
+
+        sample_out = out_pre[:1]
+        out_grid = torchvision.utils.make_grid(sample_out, 1).cpu().numpy()
+        out_grid = np.transpose(out_grid, (0, 2, 1))
+        self.logger.experiment.add_image('val/example_out', out_grid, batch_idx)
 
         return val_loss
 
@@ -140,10 +147,12 @@ class SegModel(pl.LightningModule):
         img = img.float()
         mask = mask.long()
         out = self(img)
+        # print(img.shape, mask.shape, out.shape)
 
         loss_ce = nn.CrossEntropyLoss()(out, mask)
         self.log('test/ce_loss', loss_ce)
         out_soft = F.softmax(out, dim=1)
+        print(out_soft)
         out_pre = torch.argmax(out_soft, dim=1, keepdim=True)
         loss_dice = dice_loss(out_soft[:, 1, :, :], mask==1)
         self.log('test/dice_loss', loss_dice)
@@ -161,8 +170,16 @@ class SegModel(pl.LightningModule):
         mask_grid = np.transpose(mask_grid, (0, 2, 1))
         self.logger.experiment.add_image('test/example_masks', mask_grid, batch_idx)
 
+        sample_out = out_pre[:1]
+        out_grid = torchvision.utils.make_grid(sample_out, 1).cpu().numpy()
+        out_grid = np.transpose(out_grid, (0, 2, 1))
+        self.logger.experiment.add_image('test/example_out', out_grid, batch_idx)
+
         out_pre = out_pre.data.cpu().numpy()
+        print(np.max(out_pre), np.min(out_pre))
         mask = mask.cpu().data.numpy()
+        mask = np.expand_dims(mask, axis=1)
+        # print(out_pre.shape, mask.shape)
 
         dice = dice_coef(out_pre, mask)
         self.log('test/dice', dice)
@@ -240,7 +257,7 @@ def main():
     
     seed_everything(seed=args.seed)
 
-    date = '0517_liver'
+    date = '0520_liver_test'
 
     model = SegModel(args)
     segData = SegDataModule(args)
