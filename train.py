@@ -117,7 +117,9 @@ class SegModel(pl.LightningModule):
         val_loss = 0.5 * loss_ce + 0.5 * loss_dice
         self.log('val/joint_loss', val_loss)
 
-        out_pre = torch.argmax(out, dim=1, keepdim=True)
+        out_pre = torch.argmax(out, dim=1)
+        dice = dice_coef(out_pre.data.cpu().numpy(), mask.data.cpu().numpy())
+        self.log('val/dice', dice)
         
         sample_imgs = img[:1]
         grid = torchvision.utils.make_grid(sample_imgs, 1).cpu().numpy()
