@@ -154,13 +154,15 @@ class SegModel(pl.LightningModule):
         loss_ce = nn.CrossEntropyLoss()(out, mask)
         self.log('test/ce_loss', loss_ce)
         out_soft = F.softmax(out, dim=1)
-        print(out_soft)
-        out_pre = torch.argmax(out_soft, dim=1, keepdim=True)
         loss_dice = dice_loss(out_soft[:, 1, :, :], mask==1)
         self.log('test/dice_loss', loss_dice)
 
-        test_loss = 0.2 * loss_ce + 0.8 * loss_dice
+        test_loss = 0.5 * loss_ce + 0.5 * loss_dice
         self.log('test/joint_loss', test_loss)
+
+        out_pre = torch.argmax(out, dim=1)
+        dice = dice_coef(out_pre.data.cpu().numpy(), mask.data.cpu().numpy())
+        self.log('test/dice', dice)
 
         sample_imgs = img[:1]
         grid = torchvision.utils.make_grid(sample_imgs, 2).cpu().numpy()
@@ -176,15 +178,6 @@ class SegModel(pl.LightningModule):
         out_grid = torchvision.utils.make_grid(sample_out, 1).cpu().numpy()
         out_grid = np.transpose(out_grid, (0, 2, 1))
         self.logger.experiment.add_image('test/example_out', out_grid, batch_idx)
-
-        out_pre = out_pre.data.cpu().numpy()
-        print(np.max(out_pre), np.min(out_pre))
-        mask = mask.cpu().data.numpy()
-        mask = np.expand_dims(mask, axis=1)
-        # print(out_pre.shape, mask.shape)
-
-        dice = dice_coef(out_pre, mask)
-        self.log('test/dice', dice)
         
         return dice
 
@@ -259,7 +252,7 @@ def main():
     
     seed_everything(seed=args.seed)
 
-    date = '0520_liver_test'
+    date = '0524_liver_test'
 
     model = SegModel(args)
     segData = SegDataModule(args)
@@ -298,7 +291,8 @@ def main():
     )
 
     if args.evaluate:
-        trainer.test(model, datamodule=segData, ckpt_path=args.resume)
+        model = model.load_from_checkpoint(checkpoint_path=args.resume, args=args)
+        trainer.test(model, datamodule=segData)
     else:
         trainer.fit(model, segData)
 
